@@ -1,0 +1,5 @@
+{
+  "name": "Bible Reading Tracker",
+  "description": "An elegant application to track your Bible reading progress. Calculate remaining chapters and set daily reading goals to finish the Old Testament, New Testament, or the entire Bible by the end of the year.",
+  "requestFramePermissions": []
+}
