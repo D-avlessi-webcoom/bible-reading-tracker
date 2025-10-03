@@ -89,7 +89,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900 text-slate-100 font-sans p-4 sm:p-8 flex flex-col items-center">
       <main className="w-full max-w-5xl mx-auto flex flex-col items-center text-center">
-        <header className="my-10">
+        <header className="my-10 animate-fade-in-slow">
           <h1 className="text-4xl sm:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500 tracking-tight">
             Bible Reading Tracker
           </h1>
@@ -161,6 +161,45 @@ const App: React.FC = () => {
           </button>
           {error && <p className="text-red-400 mt-4">{error}</p>}
         </div>
+        
+        <section className="mt-12 w-full animate-fade-in-slow">
+          <h2 className="text-2xl font-bold text-slate-200 mb-6 text-center">Un peu de motivation</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-sky-900/40 to-slate-800/50 backdrop-blur-sm p-6 rounded-xl border border-sky-700/50 text-left transform transition-transform duration-300 hover:scale-105">
+                <div className="flex items-center gap-4 mb-3">
+                    <div className="bg-sky-800/50 p-3 rounded-lg text-sky-300">
+                        <TargetIcon className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-sky-200">Objectif N.T.</h3>
+                </div>
+                <p className="text-slate-300">
+                    Finis le Nouveau Testament en <strong>90 jours</strong> en lisant seulement <strong>3 chapitres</strong> par jour !
+                </p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-900/40 to-slate-800/50 backdrop-blur-sm p-6 rounded-xl border border-amber-700/50 text-left transform transition-transform duration-300 hover:scale-105">
+                 <div className="flex items-center gap-4 mb-3">
+                    <div className="bg-amber-800/50 p-3 rounded-lg text-amber-300">
+                        <BookOpenIcon className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-amber-200">La Bible entière</h3>
+                </div>
+                <p className="text-slate-300">
+                    Lis la Bible en <strong>un an</strong> avec seulement <strong>~3.25 chapitres</strong> par jour. C'est possible !
+                </p>
+            </div>
+            <div className="bg-gradient-to-br from-indigo-900/40 to-slate-800/50 backdrop-blur-sm p-6 rounded-xl border border-indigo-700/50 text-left transform transition-transform duration-300 hover:scale-105">
+                 <div className="flex items-center gap-4 mb-3">
+                    <div className="bg-indigo-800/50 p-3 rounded-lg text-indigo-300">
+                        <TargetIcon className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-indigo-200">Objectif A.T.</h3>
+                </div>
+                <p className="text-slate-300">
+                    L'Ancien Testament en <strong>10 mois</strong> ? Facile avec <strong>3 chapitres</strong> quotidiens.
+                </p>
+            </div>
+          </div>
+        </section>
 
         {showResults && results && (
           <section className="mt-12 w-full animate-fade-in">
@@ -214,12 +253,15 @@ const App: React.FC = () => {
         )}
       </main>
       <style>{`
-        @keyframes fade-in {
+        @keyframes fade-in-up {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
-          animation: fade-in 0.7s ease-out forwards;
+          animation: fade-in-up 0.7s ease-out forwards;
+        }
+        .animate-fade-in-slow {
+          animation: fade-in-up 0.9s ease-out forwards;
         }
         /* Style the date picker icon */
         input[type="date"]::-webkit-calendar-picker-indicator {
