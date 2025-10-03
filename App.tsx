@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { BIBLE_BOOKS, BOOKS_WITH_CUMULATIVE, TOTAL_BIBLE_CHAPTERS, TOTAL_OT_CHAPTERS, TOTAL_NT_CHAPTERS } from './constants';
 import { Testament, CalculationResults, Book } from './types';
@@ -7,9 +6,15 @@ import BookOpenIcon from './components/icons/BookOpenIcon';
 import TargetIcon from './components/icons/TargetIcon';
 import CalendarIcon from './components/icons/CalendarIcon';
 
+const getEndOfYear = () => {
+  const today = new Date();
+  return new Date(today.getFullYear(), 11, 31).toISOString().split('T')[0];
+};
+
 const App: React.FC = () => {
   const [selectedBookId, setSelectedBookId] = useState<string>('');
   const [currentChapter, setCurrentChapter] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>(getEndOfYear());
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [error, setError] = useState<string>('');
   const [showResults, setShowResults] = useState<boolean>(false);
@@ -27,6 +32,10 @@ const App: React.FC = () => {
     if (!bookId || !chapterNum) {
       setError('Veuillez sélectionner un livre et un chapitre.');
       return;
+    }
+    if (!endDate) {
+        setError('Veuillez sélectionner une date butoire.');
+        return;
     }
 
     const bookWithData = BOOKS_WITH_CUMULATIVE.find(b => b.id === bookId);
@@ -50,7 +59,8 @@ const App: React.FC = () => {
       remainingInNT = TOTAL_NT_CHAPTERS;
     } else {
       const chaptersReadInNT = bookWithData.chaptersBeforeInNT + chaptersReadInCurrentBook;
-      remainingInOT = 0;
+      const chaptersReadInOT = TOTAL_OT_CHAPTERS;
+      remainingInOT = TOTAL_OT_CHAPTERS - chaptersReadInOT;
       remainingInNT = TOTAL_NT_CHAPTERS - chaptersReadInNT;
     }
     
@@ -58,21 +68,23 @@ const App: React.FC = () => {
     const remainingInBible = TOTAL_BIBLE_CHAPTERS - chaptersReadInBible;
 
     const now = new Date();
-    const endOfYear = new Date(now.getFullYear(), 11, 31);
-    const daysLeftInYear = Math.ceil((endOfYear.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    now.setHours(0, 0, 0, 0); // Normalize to the start of the day
+    const targetDate = new Date(endDate + 'T00:00:00');
+    const daysLeft = Math.max(0, Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     
     setResults({
       remainingInBible,
       remainingInOT,
       remainingInNT,
-      daysLeftInYear,
-      dailyGoalForBible: daysLeftInYear > 0 ? Math.ceil(remainingInBible / daysLeftInYear) : remainingInBible,
-      dailyGoalForOT: daysLeftInYear > 0 && remainingInOT > 0 ? Math.ceil(remainingInOT / daysLeftInYear) : remainingInOT,
-      dailyGoalForNT: daysLeftInYear > 0 && remainingInNT > 0 ? Math.ceil(remainingInNT / daysLeftInYear) : remainingInNT,
+      daysLeft,
+      dailyGoalForBible: daysLeft > 0 ? Math.ceil(remainingInBible / daysLeft) : remainingInBible,
+      dailyGoalForOT: daysLeft > 0 && remainingInOT > 0 ? Math.ceil(remainingInOT / daysLeft) : remainingInOT,
+      dailyGoalForNT: daysLeft > 0 && remainingInNT > 0 ? Math.ceil(remainingInNT / daysLeft) : remainingInNT,
+      endDate: targetDate.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }),
     });
     setShowResults(true);
 
-  }, [selectedBookId, currentChapter]);
+  }, [selectedBookId, currentChapter, endDate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900 text-slate-100 font-sans p-4 sm:p-8 flex flex-col items-center">
@@ -87,8 +99,8 @@ const App: React.FC = () => {
         </header>
 
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 sm:p-8 w-full max-w-3xl shadow-2xl shadow-slate-900/50">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="md:col-span-2">
               <label htmlFor="book-select" className="block text-left text-sm font-medium text-slate-300 mb-2">Livre actuel</label>
               <select
                 id="book-select"
@@ -115,7 +127,7 @@ const App: React.FC = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="chapter-input" className="block text-left text-sm font-medium text-slate-300 mb-2">Chapitre actuel</label>
+              <label htmlFor="chapter-input" className="block text-left text-sm font-medium text-slate-300 mb-2">Chapitre</label>
               <input
                 type="number"
                 id="chapter-input"
@@ -127,6 +139,17 @@ const App: React.FC = () => {
                 disabled={!selectedBook}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition disabled:opacity-50"
               />
+            </div>
+             <div className="md:col-span-3">
+               <label htmlFor="end-date" className="block text-left text-sm font-medium text-slate-300 mb-2">Date butoire</label>
+                <input
+                    type="date"
+                    id="end-date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition"
+                />
             </div>
           </div>
           <button
@@ -164,8 +187,8 @@ const App: React.FC = () => {
                  <StatCard 
                     icon={<CalendarIcon className="w-6 h-6" />} 
                     title="Jours restants" 
-                    value={results.daysLeftInYear.toLocaleString()}
-                    footer="D'ici la fin de l'année"
+                    value={results.daysLeft.toLocaleString()}
+                    footer={`Jusqu'au ${results.endDate}`}
                 />
                 <StatCard 
                     icon={<TargetIcon className="w-7 h-7" />} 
@@ -177,13 +200,13 @@ const App: React.FC = () => {
                 <StatCard 
                     icon={<TargetIcon className="w-6 h-6" />} 
                     title="Objectif A.T." 
-                    value={`${results.dailyGoalForOT}`}
+                    value={`${results.dailyGoalForOT > 0 ? results.dailyGoalForOT : '-'}`}
                     footer="Chapitres/jour"
                 />
                 <StatCard 
                     icon={<TargetIcon className="w-6 h-6" />} 
                     title="Objectif N.T." 
-                    value={`${results.dailyGoalForNT}`}
+                    value={`${results.dailyGoalForNT > 0 ? results.dailyGoalForNT : '-'}`}
                     footer="Chapitres/jour"
                 />
              </div>
@@ -197,6 +220,11 @@ const App: React.FC = () => {
         }
         .animate-fade-in {
           animation: fade-in 0.7s ease-out forwards;
+        }
+        /* Style the date picker icon */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          filter: invert(0.8) brightness(100%) sepia(100%) hue-rotate(330deg) saturate(300%);
+          cursor: pointer;
         }
       `}</style>
     </div>
