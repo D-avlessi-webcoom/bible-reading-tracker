@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { BIBLE_BOOKS, BOOKS_WITH_CUMULATIVE, TOTAL_BIBLE_CHAPTERS, TOTAL_OT_CHAPTERS, TOTAL_NT_CHAPTERS } from './constants';
 import { Testament, CalculationResults, Book } from './types';
 import StatCard from './components/StatCard';
@@ -18,11 +18,18 @@ const App: React.FC = () => {
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [error, setError] = useState<string>('');
   const [showResults, setShowResults] = useState<boolean>(false);
+  const resultsRef = useRef<HTMLElement>(null);
 
   const selectedBook: Book | undefined = useMemo(() => BIBLE_BOOKS.find(b => b.id === parseInt(selectedBookId, 10)), [selectedBookId]);
 
   const oldTestamentBooks = useMemo(() => BIBLE_BOOKS.filter(book => book.testament === Testament.Old), []);
   const newTestamentBooks = useMemo(() => BIBLE_BOOKS.filter(book => book.testament === Testament.New), []);
+  
+  useEffect(() => {
+    if (showResults && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [showResults]);
 
   const handleCalculate = useCallback(() => {
     setError('');
@@ -132,7 +139,11 @@ const App: React.FC = () => {
                 type="number"
                 id="chapter-input"
                 value={currentChapter}
-                onChange={(e) => setCurrentChapter(e.target.value)}
+                onChange={(e) => {
+                  setCurrentChapter(e.target.value);
+                  setResults(null);
+                  setShowResults(false);
+                }}
                 placeholder="Ex: 25"
                 min="1"
                 max={selectedBook?.chapters}
@@ -146,7 +157,11 @@ const App: React.FC = () => {
                     type="date"
                     id="end-date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setResults(null);
+                      setShowResults(false);
+                    }}
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition"
                 />
@@ -202,7 +217,7 @@ const App: React.FC = () => {
         </section>
 
         {showResults && results && (
-          <section className="mt-12 w-full animate-fade-in">
+          <section ref={resultsRef} className="mt-12 w-full animate-fade-in">
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard 
                     icon={<BookOpenIcon className="w-7 h-7" />} 
