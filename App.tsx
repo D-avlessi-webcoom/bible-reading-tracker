@@ -5,6 +5,7 @@ import StatCard from './components/StatCard';
 import BookOpenIcon from './components/icons/BookOpenIcon';
 import TargetIcon from './components/icons/TargetIcon';
 import CalendarIcon from './components/icons/CalendarIcon';
+import ChapterSelectionModal from './components/ChapterSelectionModal';
 
 const getEndOfYear = () => {
   const today = new Date();
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [error, setError] = useState<string>('');
   const [showResults, setShowResults] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const resultsRef = useRef<HTMLElement>(null);
 
   const selectedBook: Book | undefined = useMemo(() => BIBLE_BOOKS.find(b => b.id === parseInt(selectedBookId, 10)), [selectedBookId]);
@@ -30,6 +32,13 @@ const App: React.FC = () => {
       resultsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [showResults]);
+
+  const handleChapterSelect = (chapter: number) => {
+    setCurrentChapter(String(chapter));
+    setResults(null);
+    setShowResults(false);
+    setIsModalOpen(false);
+  };
 
   const handleCalculate = useCallback(() => {
     setError('');
@@ -134,22 +143,15 @@ const App: React.FC = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="chapter-input" className="block text-left text-sm font-medium text-slate-300 mb-2">Chapitre</label>
-              <input
-                type="number"
-                id="chapter-input"
-                value={currentChapter}
-                onChange={(e) => {
-                  setCurrentChapter(e.target.value);
-                  setResults(null);
-                  setShowResults(false);
-                }}
-                placeholder="Ex: 25"
-                min="1"
-                max={selectedBook?.chapters}
-                disabled={!selectedBook}
-                className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition disabled:opacity-50"
-              />
+              <label htmlFor="chapter-select-button" className="block text-left text-sm font-medium text-slate-300 mb-2">Chapitre</label>
+               <button
+                  id="chapter-select-button"
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!selectedBook}
+                  className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition disabled:opacity-50 text-left"
+                >
+                  {currentChapter ? `Chapitre ${currentChapter}` : 'Sélectionner...'}
+                </button>
             </div>
              <div className="md:col-span-3">
                <label htmlFor="end-date" className="block text-left text-sm font-medium text-slate-300 mb-2">Date butoire</label>
@@ -267,10 +269,27 @@ const App: React.FC = () => {
           </section>
         )}
       </main>
+      <ChapterSelectionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          book={selectedBook}
+          selectedChapter={currentChapter ? parseInt(currentChapter, 10) : null}
+          onSelectChapter={handleChapterSelect}
+      />
       <style>{`
+        @keyframes simple-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
         @keyframes fade-in-up {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-modal-backdrop {
+          animation: simple-fade-in 0.3s ease-out forwards;
+        }
+        .animate-modal-content {
+          animation: fade-in-up 0.4s ease-out forwards;
         }
         .animate-fade-in {
           animation: fade-in-up 0.7s ease-out forwards;
