@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { BIBLE_BOOKS, BOOKS_WITH_CUMULATIVE, TOTAL_BIBLE_CHAPTERS, TOTAL_OT_CHAPTERS, TOTAL_NT_CHAPTERS } from './constants';
 import { Testament, CalculationResults, Book } from './types';
@@ -20,6 +21,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [showResults, setShowResults] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isOTIncluded, setIsOTIncluded] = useState<boolean>(true);
+  const [isNTIncluded, setIsNTIncluded] = useState<boolean>(true);
   const resultsRef = useRef<HTMLElement>(null);
 
   const selectedBook: Book | undefined = useMemo(() => BIBLE_BOOKS.find(b => b.id === parseInt(selectedBookId, 10)), [selectedBookId]);
@@ -72,16 +75,14 @@ const App: React.FC = () => {
     if (bookWithData.testament === Testament.Old) {
       const chaptersReadInOT = bookWithData.chaptersBeforeInOT + chaptersReadInCurrentBook;
       remainingInOT = TOTAL_OT_CHAPTERS - chaptersReadInOT;
-      remainingInNT = TOTAL_NT_CHAPTERS;
-    } else {
+      remainingInNT = isNTIncluded ? TOTAL_NT_CHAPTERS : 0;
+    } else { // New Testament book
       const chaptersReadInNT = bookWithData.chaptersBeforeInNT + chaptersReadInCurrentBook;
-      const chaptersReadInOT = TOTAL_OT_CHAPTERS;
-      remainingInOT = TOTAL_OT_CHAPTERS - chaptersReadInOT;
       remainingInNT = TOTAL_NT_CHAPTERS - chaptersReadInNT;
+      remainingInOT = isOTIncluded ? 0 : TOTAL_OT_CHAPTERS;
     }
     
-    const chaptersReadInBible = bookWithData.chaptersBefore + chaptersReadInCurrentBook;
-    const remainingInBible = TOTAL_BIBLE_CHAPTERS - chaptersReadInBible;
+    const remainingInBible = remainingInOT + remainingInNT;
 
     const now = new Date();
     now.setHours(0, 0, 0, 0); // Normalize to the start of the day
@@ -100,7 +101,7 @@ const App: React.FC = () => {
     });
     setShowResults(true);
 
-  }, [selectedBookId, currentChapter, endDate]);
+  }, [selectedBookId, currentChapter, endDate, isOTIncluded, isNTIncluded]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900 text-slate-100 font-sans p-4 sm:p-8 flex flex-col items-center">
@@ -115,7 +116,7 @@ const App: React.FC = () => {
         </header>
 
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 sm:p-8 w-full max-w-3xl shadow-2xl shadow-slate-900/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             <div className="md:col-span-2">
               <label htmlFor="book-select" className="block text-left text-sm font-medium text-slate-300 mb-2">Livre actuel</label>
               <select
@@ -126,6 +127,8 @@ const App: React.FC = () => {
                   setCurrentChapter('');
                   setResults(null);
                   setShowResults(false);
+                  setIsOTIncluded(true);
+                  setIsNTIncluded(true);
                 }}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition"
               >
@@ -153,6 +156,44 @@ const App: React.FC = () => {
                   {currentChapter ? `Chapitre ${currentChapter}` : 'Sélectionner...'}
                 </button>
             </div>
+            {selectedBook?.testament && (
+              <div className="md:col-span-3 mt-2 flex items-center justify-between rounded-md p-3 bg-slate-900/50 border border-slate-700">
+                <span className="text-sm font-medium text-slate-300 pr-4">
+                  {selectedBook.testament === Testament.New
+                    ? "Voulez-vous inclure l'ancien testament dans l'objectif ?"
+                    : "Voulez-vous inclure le nouveau testament dans l'objectif ?"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedBook.testament === Testament.New) {
+                      setIsOTIncluded(!isOTIncluded);
+                    } else {
+                      setIsNTIncluded(!isNTIncluded);
+                    }
+                  }}
+                  className={`${
+                    (selectedBook.testament === Testament.New && isOTIncluded) ||
+                    (selectedBook.testament === Testament.Old && isNTIncluded)
+                      ? 'bg-amber-400'
+                      : 'bg-slate-600'
+                  } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-800`}
+                  role="switch"
+                  aria-checked={selectedBook.testament === Testament.New ? isOTIncluded : isNTIncluded}
+                >
+                  <span className="sr-only">Use setting</span>
+                  <span
+                    aria-hidden="true"
+                    className={`${
+                      (selectedBook.testament === Testament.New && isOTIncluded) ||
+                      (selectedBook.testament === Testament.Old && isNTIncluded)
+                        ? 'translate-x-5'
+                        : 'translate-x-0'
+                    } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                  />
+                </button>
+              </div>
+            )}
              <div className="md:col-span-3">
                <label htmlFor="end-date" className="block text-left text-sm font-medium text-slate-300 mb-2">Date butoire</label>
                 <input
@@ -220,51 +261,62 @@ const App: React.FC = () => {
 
         {showResults && results && (
           <section ref={resultsRef} className="mt-12 w-full animate-fade-in">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StatCard 
                     icon={<BookOpenIcon className="w-7 h-7" />} 
-                    title="Chapitres restants" 
+                    title="Chapitres restants (Objectif total)" 
                     value={results.remainingInBible.toLocaleString()}
-                    footer="Pour finir la Bible"
-                    className="lg:col-span-3"
+                    footer="Pour finir votre objectif"
+                    className="md:col-span-2"
                 />
                 <StatCard 
-                    icon={<BookOpenIcon className="w-6 h-6" />} 
-                    title="Ancien Testament" 
-                    value={results.remainingInOT.toLocaleString()}
-                    footer="Chapitres restants"
+                    icon={<TargetIcon className="w-7 h-7" />} 
+                    title="Objectif journalier (Total)" 
+                    value={`${results.dailyGoalForBible}`}
+                    footer="Chapitres/jour pour finir votre objectif"
                 />
                 <StatCard 
-                    icon={<BookOpenIcon className="w-6 h-6" />} 
-                    title="Nouveau Testament" 
-                    value={results.remainingInNT.toLocaleString()}
-                    footer="Chapitres restants"
-                />
-                 <StatCard 
                     icon={<CalendarIcon className="w-6 h-6" />} 
                     title="Jours restants" 
                     value={results.daysLeft.toLocaleString()}
                     footer={`Jusqu'au ${results.endDate}`}
                 />
-                <StatCard 
-                    icon={<TargetIcon className="w-7 h-7" />} 
-                    title="Objectif journalier" 
-                    value={`${results.dailyGoalForBible}`}
-                    footer="Chapitres/jour pour finir la Bible"
-                    className="lg:col-span-3"
-                />
-                <StatCard 
-                    icon={<TargetIcon className="w-6 h-6" />} 
-                    title="Objectif A.T." 
-                    value={`${results.dailyGoalForOT > 0 ? results.dailyGoalForOT : '-'}`}
-                    footer="Chapitres/jour"
-                />
-                <StatCard 
-                    icon={<TargetIcon className="w-6 h-6" />} 
-                    title="Objectif N.T." 
-                    value={`${results.dailyGoalForNT > 0 ? results.dailyGoalForNT : '-'}`}
-                    footer="Chapitres/jour"
-                />
+
+                {results.remainingInOT > 0 && (
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-800/30 rounded-xl border border-slate-700/30">
+                     <h3 className="md:col-span-2 text-xl font-bold text-slate-200 text-left mb-2">Détails: Ancien Testament</h3>
+                    <StatCard 
+                        icon={<BookOpenIcon className="w-6 h-6" />} 
+                        title="A.T. restant" 
+                        value={results.remainingInOT.toLocaleString()}
+                        footer="Chapitres restants"
+                    />
+                    <StatCard 
+                        icon={<TargetIcon className="w-6 h-6" />} 
+                        title="Objectif A.T." 
+                        value={`${results.dailyGoalForOT > 0 ? results.dailyGoalForOT : '-'}`}
+                        footer="Chapitres/jour"
+                    />
+                  </div>
+                )}
+
+                {results.remainingInNT > 0 && (
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-800/30 rounded-xl border border-slate-700/30">
+                    <h3 className="md:col-span-2 text-xl font-bold text-slate-200 text-left mb-2">Détails: Nouveau Testament</h3>
+                    <StatCard 
+                        icon={<BookOpenIcon className="w-6 h-6" />} 
+                        title="N.T. restant" 
+                        value={results.remainingInNT.toLocaleString()}
+                        footer="Chapitres restants"
+                    />
+                    <StatCard 
+                        icon={<TargetIcon className="w-6 h-6" />} 
+                        title="Objectif N.T." 
+                        value={`${results.dailyGoalForNT > 0 ? results.dailyGoalForNT : '-'}`}
+                        footer="Chapitres/jour"
+                    />
+                  </div>
+                )}
              </div>
           </section>
         )}
