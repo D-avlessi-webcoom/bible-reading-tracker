@@ -2,7 +2,7 @@ const CACHE_NAME = 'bible-tracker-cache-v1';
 const PRECACHE_ASSETS = [
     '/',
     '/index.html',
-    '/icon.svg',
+    '/icon.png',
 ];
 
 self.addEventListener('install', event => {
