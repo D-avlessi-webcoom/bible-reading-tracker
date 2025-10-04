@@ -1,6 +1,5 @@
 
-
-const CACHE_NAME = 'bible-tracker-cache-v3';
+const CACHE_NAME = 'bible-tracker-cache-v2';
 const PRECACHE_ASSETS = [
     '/',
     '/index.html',
@@ -14,7 +13,6 @@ const PRECACHE_ASSETS = [
     '/components/icons/BookOpenIcon.tsx',
     '/components/icons/CalendarIcon.tsx',
     '/components/icons/TargetIcon.tsx',
-    '/components/icons/BellIcon.tsx',
     'https://cdn.tailwindcss.com',
     // The following URLs are based on the import map in index.html
     'https://aistudiocdn.com/react@^19.2.0',
@@ -54,72 +52,23 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.open(CACHE_NAME).then(cache => {
             return cache.match(event.request).then(response => {
+                // Fetch from network in the background to update the cache
                 const fetchPromise = fetch(event.request).then(networkResponse => {
+                    // Check if we received a valid response
                     if (networkResponse && networkResponse.status === 200) {
                         cache.put(event.request, networkResponse.clone());
                     }
                     return networkResponse;
                 }).catch(err => {
+                    // Network request failed, but that's okay if we have a cached response.
+                    // If we don't, the user is offline and the resource is not cached.
                     console.warn(`Fetch failed for: ${event.request.url}`, err);
                 });
+
+                // Return the cached response immediately if it exists, otherwise wait for the network response.
+                // This ensures the app works offline if everything is precached.
                 return response || fetchPromise;
             });
         })
     );
-});
-
-// --- Notification Logic ---
-let reminderTimeoutId = null;
-
-self.addEventListener('message', (event) => {
-    if (event.data.type === 'SET_REMINDER') {
-        clearTimeout(reminderTimeoutId);
-        const [hours, minutes] = event.data.time.split(':').map(Number);
-        
-        const scheduleNotification = () => {
-            const now = new Date();
-            let nextNotification = new Date();
-            nextNotification.setHours(hours, minutes, 0, 0);
-
-            if (now > nextNotification) {
-                nextNotification.setDate(nextNotification.getDate() + 1);
-            }
-
-            const delay = nextNotification.getTime() - now.getTime();
-            console.log(`Scheduling notification in ${delay} ms`);
-
-            reminderTimeoutId = setTimeout(() => {
-                self.registration.showNotification('Rappel de lecture biblique', {
-                    body: 'Il est temps de lire vos chapitres quotidiens !',
-                    icon: '/icon.svg',
-                    badge: '/icon.svg',
-                    vibrate: [200, 100, 200],
-                });
-                // Reschedule for the next day
-                scheduleNotification();
-            }, delay);
-        };
-        scheduleNotification();
-    } else if (event.data.type === 'CLEAR_REMINDER') {
-        clearTimeout(reminderTimeoutId);
-        reminderTimeoutId = null;
-    }
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-          }
-        }
-        return client.focus();
-      }
-      return clients.openWindow('/');
-    })
-  );
 });

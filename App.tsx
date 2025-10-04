@@ -5,14 +5,11 @@ import StatCard from './components/StatCard';
 import BookOpenIcon from './components/icons/BookOpenIcon';
 import TargetIcon from './components/icons/TargetIcon';
 import CalendarIcon from './components/icons/CalendarIcon';
-import BellIcon from './components/icons/BellIcon';
 
 const getEndOfYear = () => {
   const today = new Date();
   return new Date(today.getFullYear(), 11, 31).toISOString().split('T')[0];
 };
-
-type ReminderStatus = 'inactive' | 'active' | 'denied';
 
 const App: React.FC = () => {
   const [selectedBookId, setSelectedBookId] = useState<string>('');
@@ -22,9 +19,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [showResults, setShowResults] = useState<boolean>(false);
   const resultsRef = useRef<HTMLElement>(null);
-  
-  const [reminderTime, setReminderTime] = useState('08:00');
-  const [reminderStatus, setReminderStatus] = useState<ReminderStatus>('inactive');
 
   const selectedBook: Book | undefined = useMemo(() => BIBLE_BOOKS.find(b => b.id === parseInt(selectedBookId, 10)), [selectedBookId]);
 
@@ -36,56 +30,6 @@ const App: React.FC = () => {
       resultsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [showResults]);
-
-  useEffect(() => {
-    const savedTime = localStorage.getItem('reminderTime');
-    if (savedTime) {
-        if (Notification.permission === 'granted') {
-            setReminderTime(savedTime);
-            setReminderStatus('active');
-            navigator.serviceWorker.ready.then(registration => {
-                registration.active?.postMessage({ type: 'SET_REMINDER', time: savedTime });
-            });
-        } else if (Notification.permission === 'denied') {
-            setReminderStatus('denied');
-        } else {
-            // Permission was granted then revoked, or something else changed.
-            localStorage.removeItem('reminderTime');
-        }
-    } else {
-        if (Notification.permission === 'denied') {
-            setReminderStatus('denied');
-        }
-    }
-}, []);
-
-
-  const handleSetReminder = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        alert("Les notifications ne sont pas supportées sur ce navigateur.");
-        return;
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-        localStorage.setItem('reminderTime', reminderTime);
-        setReminderStatus('active');
-        navigator.serviceWorker.ready.then(registration => {
-            registration.active?.postMessage({ type: 'SET_REMINDER', time: reminderTime });
-        });
-    } else {
-        setReminderStatus('denied');
-    }
-  };
-
-  const handleDisableReminder = () => {
-    localStorage.removeItem('reminderTime');
-    setReminderStatus('inactive');
-    navigator.serviceWorker.ready.then(registration => {
-        registration.active?.postMessage({ type: 'CLEAR_REMINDER' });
-    });
-  };
-
 
   const handleCalculate = useCallback(() => {
     setError('');
@@ -223,39 +167,10 @@ const App: React.FC = () => {
                 />
             </div>
           </div>
-          
-          <div className="mt-6 pt-6 border-t border-slate-700/50">
-            <label htmlFor="reminder-time" className="flex items-center gap-2 text-left text-sm font-medium text-slate-300 mb-2">
-                <BellIcon className="w-5 h-5 text-amber-400" />
-                Rappel Quotidien
-            </label>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-                <input
-                    type="time"
-                    id="reminder-time"
-                    value={reminderTime}
-                    onChange={e => setReminderTime(e.target.value)}
-                    disabled={reminderStatus === 'active' || reminderStatus === 'denied'}
-                    className="w-full sm:w-auto flex-grow bg-slate-700/50 border border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-amber-400 focus:outline-none transition disabled:opacity-50"
-                />
-                {reminderStatus !== 'active' ? (
-                <button onClick={handleSetReminder} disabled={reminderStatus === 'denied'} className="w-full sm:w-auto bg-sky-500 text-white font-bold py-3 px-6 rounded-md hover:bg-sky-400 transition-all duration-300 disabled:bg-slate-600 disabled:cursor-not-allowed">
-                    Activer
-                </button>
-                ) : (
-                <button onClick={handleDisableReminder} className="w-full sm:w-auto bg-red-500 text-white font-bold py-3 px-6 rounded-md hover:bg-red-400 transition-all duration-300">
-                    Désactiver
-                </button>
-                )}
-            </div>
-             {reminderStatus === 'active' && <p className="text-sm text-slate-400 mt-2 text-left">Rappel activé pour {reminderTime}.</p>}
-             {reminderStatus === 'denied' && <p className="text-sm text-red-400 mt-2 text-left">Les notifications sont bloquées par votre navigateur.</p>}
-          </div>
-
           <button
             onClick={handleCalculate}
             disabled={!selectedBookId || !currentChapter}
-            className="w-full mt-8 bg-amber-400 text-slate-900 font-bold py-3 px-8 rounded-md hover:bg-amber-300 transition-all duration-300 transform hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed disabled:scale-100"
+            className="w-full mt-6 bg-amber-400 text-slate-900 font-bold py-3 px-8 rounded-md hover:bg-amber-300 transition-all duration-300 transform hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed disabled:scale-100"
           >
             Calculer ma progression
           </button>
@@ -364,8 +279,7 @@ const App: React.FC = () => {
           animation: fade-in-up 0.9s ease-out forwards;
         }
         /* Style the date picker icon */
-        input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator {
+        input[type="date"]::-webkit-calendar-picker-indicator {
           filter: invert(0.8) brightness(100%) sepia(100%) hue-rotate(330deg) saturate(300%);
           cursor: pointer;
         }
